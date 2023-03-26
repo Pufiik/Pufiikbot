@@ -1,23 +1,29 @@
 package ru.pugovishnikova.Pufiikbot.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.pugovishnikova.Pufiikbot.config.BotConfig;
+import ru.pugovishnikova.Pufiikbot.model.User;
+import ru.pugovishnikova.Pufiikbot.model.UserRepository;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
 @Component
 public class TelegramBot extends TelegramLongPollingBot {
-
+    @Autowired
+    private UserRepository userRepository;
     final BotConfig config;
     static final String helpText = "This bot is created to demonstrated some console functions\n\n" +
             "Commands:\n"+
@@ -61,6 +67,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             switch (textMessage){
                 case "/start":
+                    registerUser(update.getMessage());
                     startedProcess(chatID, update.getMessage().getChat().getFirstName());
                     break;
                 case "/help":
@@ -75,6 +82,30 @@ public class TelegramBot extends TelegramLongPollingBot {
 
 
     }
+
+    private void registerUser(Message msg) {
+        if (userRepository.findById(msg.getChatId()).isEmpty()) {
+            var chatId = msg.getChatId();
+            var chat = msg.getChat();
+
+            User user = new User();
+            user.setChatId(chatId);
+            user.setFirstName(chat.getFirstName());
+            user.setLastName(chat.getLastName());
+            user.setUserName(chat.getUserName());
+            user.setRegisteredAt(new Timestamp(System.currentTimeMillis()));
+            userRepository.save(user);
+            log.info("user saved "+ user);
+        }
+        else{
+            var chatId = msg.getChatId();
+            var chat = msg.getChat();
+
+            System.out.println(msg.getChatId());
+
+        }
+    }
+
     public void startedProcess(long chatId, String name){
          String answer = "Hi, " + name + ", nice to see you here!";
          log.info("Answer to user: "+ name +", chatID: " + chatId);
